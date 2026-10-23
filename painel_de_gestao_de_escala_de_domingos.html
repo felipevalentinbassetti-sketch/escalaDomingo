@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Gestão de Escala de Domingos</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              200: '#bae0fd',
+              500: '#0284c7',
+              600: '#0265d2',
+              700: '#0369a1',
+              900: '#0c4a6e',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #f8fafc;
+      font-family: 'Inter', sans-serif;
+    }
+    .font-display {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+  </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen pb-12">
+
+  <!-- Header da Aplicação -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 shadow-sm sticky top-0 z-30">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-sky-600/20 border border-sky-500/30 rounded-xl text-sky-400">
+          <i data-lucide="calendar-check-2" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="font-display font-bold text-lg sm:text-xl text-slate-100 flex items-center gap-2">
+            Gestão de Escala de Domingos
+          </h1>
+          <p class="text-xs text-slate-400">Planejamento e compensação de turnos em tempo real</p>
+        </div>
+      </div>
+
+      <!-- Sincronização & Status Firestore -->
+      <div class="flex items-center gap-3">
+        <div class="bg-slate-800 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span class="relative flex h-2.5 w-2.5">
+            <span id="sync-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span id="sync-dot" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+          <span id="sync-text" class="text-xs font-medium text-slate-300">Sincronizado na Nuvem</span>
+        </div>
+
+        <button onclick="copiarLinkPainel()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium rounded-lg transition flex items-center gap-1.5" title="Copiar link compartilhado">
+          <i data-lucide="share-2" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span>Compartilhar</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Container Principal -->
+  <main class="max-w-6xl mx-auto px-4 mt-6 space-y-6">
+
+    <!-- Resumo & Painel Informativo -->
+    <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <!-- Card Total de Domingos Mês -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Próximo Turno</p>
+          <h3 id="card-proximo-turno" class="font-display text-lg font-bold text-slate-900">Carregando...</h3>
+          <p id="card-proximo-data" class="text-xs text-slate-500 mt-1">--/--/----</p>
+        </div>
+        <div class="p-3 bg-slate-100 rounded-xl text-slate-600">
+          <i data-lucide="user-check" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <!-- Card Turnos Felipe -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Turnos Felipe</p>
+          <h3 id="card-total-felipe" class="font-display text-2xl font-bold text-slate-900">0</h3>
+          <p class="text-xs text-slate-500 mt-1">Nos próximos domingos</p>
+        </div>
+        <div class="p-3 bg-sky-50 rounded-xl text-sky-600 border border-sky-100">
+          <i data-lucide="briefcase" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <!-- Card Turnos Luana -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Turnos Luana</p>
+          <h3 id="card-total-luana" class="font-display text-2xl font-bold text-slate-900">0</h3>
+          <p class="text-xs text-slate-500 mt-1">Nos próximos domingos</p>
+        </div>
+        <div class="p-3 bg-purple-50 rounded-xl text-purple-600 border border-purple-100">
+          <i data-lucide="building-2" class="w-6 h-6"></i>
+        </div>
+      </div>
+
+      <!-- Card Compensações/Ajustes -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Status Regra de Troca</p>
+          <h3 id="card-status-compensacao" class="font-display text-sm font-bold text-amber-700">Com Compensação</h3>
+          <p id="card-desc-compensacao" class="text-xs text-slate-500 mt-1">Felipe pagando cobertura</p>
+        </div>
+        <div class="p-3 bg-amber-50 rounded-xl text-amber-600 border border-amber-100">
+          <i data-lucide="arrow-left-right" class="w-6 h-6"></i>
+        </div>
+      </div>
+    </section>
+
+    <!-- Barra de Ferramentas, Filtros e Ações -->
+    <section class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Filtro Responsável -->
+        <div class="flex items-center gap-2">
+          <label class="text-xs font-medium text-slate-500">Filtrar por:</label>
+          <select id="filtro-responsavel" onchange="aplicarFiltros()" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+            <option value="todos">Todos os Responsáveis</option>
+            <option value="felipe">Apenas Felipe</option>
+            <option value="luana">Apenas Luana</option>
+          </select>
+        </div>
+
+        <!-- Filtro Status -->
+        <div class="flex items-center gap-2">
+          <select id="filtro-tipo" onchange="aplicarFiltros()" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+            <option value="todos">Todos os Tipos</option>
+            <option value="regular">Escala Regular</option>
+            <option value="cobertura">Cobertura / Compensação</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Botões de Ação -->
+      <div class="flex items-center gap-2">
+        <button onclick="abrirModalTroca()" class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs rounded-xl shadow-xs transition flex items-center gap-1.5">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Registrar Troca / Cobertura</span>
+        </button>
+
+        <button onclick="reiniciarEscalaPadrao()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium text-xs rounded-xl transition flex items-center gap-1" title="Restaurar escala padrão">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Resetar</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Tabela / Lista de Domingos Futuros -->
+    <section class="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h2 class="font-display font-semibold text-slate-800 text-base flex items-center gap-2">
+          <i data-lucide="calendar" class="w-4 h-4 text-sky-600"></i>
+          Cronograma Futuro de Escala (A partir de 25/10/2026)
+        </h2>
+        <span class="text-xs text-slate-400">Atualização automática e instantânea</span>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-100 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <th class="py-3 px-5">Data</th>
+              <th class="py-3 px-5">Responsável pelo Turno</th>
+              <th class="py-3 px-5">Status do Domingo</th>
+              <th class="py-3 px-5">Observação / Motivo</th>
+              <th class="py-3 px-5 text-right">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-escala" class="divide-y divide-slate-100 text-xs">
+            <!-- Renderizado dinamicamente via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal para Registrar Troca/Cobertura -->
+  <div id="modal-troca" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 border border-slate-200 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-display font-bold text-slate-900 text-base flex items-center gap-2">
+          <i data-lucide="arrow-left-right" class="w-5 h-5 text-sky-600"></i>
+          Registrar Troca / Cobertura
+        </h3>
+        <button onclick="fecharModalTroca()" class="text-slate-400 hover:text-slate-600">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500">
+        A regra de compensação será aplicada automaticamente: quem é coberto folga, e quem cobre assume o turno trabalhando no domingo atual e no subsequente para fins de compensação.
+      </p>
+
+      <form onsubmit="salvarTroca(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Selecione o Domingo da Troca:</label>
+          <select id="select-domingo-troca" required class="w-full text-xs border border-slate-300 rounded-xl p-2.5 bg-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+            <!-- Opções via JS -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Quem solicitou a cobertura (Vai Folgar):</label>
+          <select id="select-solicitante" required class="w-full text-xs border border-slate-300 rounded-xl p-2.5 bg-white focus:ring-2 focus:ring-sky-500 focus:outline-none">
+            <option value="felipe">Felipe (Luana cobre)</option>
+            <option value="luana">Luana (Felipe cobre)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Motivo / Observação Corporativa:</label>
+          <input type="text" id="input-motivo" placeholder="Ex: Hackathon iFood, Evento externo..." required class="w-full text-xs border border-slate-300 rounded-xl p-2.5 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+          <button type="button" onclick="fecharModalTroca()" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl">
+            Cancelar
+          </button>
+          <button type="submit" class="px-4 py-2 text-xs font-medium bg-sky-600 hover:bg-sky-700 text-white rounded-xl shadow-xs transition">
+            Aplicar e Recalcular Escala
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-4 right-4 bg-slate-900 text-white px-4 py-3 rounded-xl text-xs shadow-lg flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+    <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+    <span id="toast-mensagem">Escala atualizada com sucesso!</span>
+  </div>
+
+  <!-- Firebase Modular JS SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // App ID & Firebase Config (Injetados pelo ambiente ou fallback padrão seguro)
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'escala-domingos-felipe-luana';
+    
+    // Configuração Firebase Padrão para uso no ambiente
+    const firebaseConfig = typeof __firebase_config !== 'undefined' 
+      ? JSON.parse(__firebase_config) 
+      : {
+          apiKey: "AIzaSyDummyKeyForFallbackPublicUsage",
+          authDomain: "app-default.firebaseapp.com",
+          projectId: "app-default",
+          storageBucket: "app-default.appspot.com",
+          messagingSenderId: "000000000000",
+          appId: "1:000000000000:web:000000000000"
+        };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Escala inicial padrão conforme acertado (Começando em 25 de Outubro de 2026)
+    const escalaInicial = [
+      { id: '2026-10-25', data: '2026-10-25', responsavel: 'felipe', tipo: 'cobertura', motivo: 'Cobertura Hackathon iFood (1/2)' },
+      { id: '2026-11-01', data: '2026-11-01', responsavel: 'felipe', tipo: 'cobertura', motivo: 'Cobertura Hackathon iFood (2/2)' },
+      { id: '2026-11-08', data: '2026-11-08', responsavel: 'luana', tipo: 'regular', motivo: 'Escala Regular' },
+      { id: '2026-11-15', data: '2026-11-15', responsavel: 'felipe', tipo: 'regular', motivo: 'Escala Regular' },
+      { id: '2026-11-22', data: '2026-11-22', responsavel: 'luana', tipo: 'regular', motivo: 'Escala Regular' },
+      { id: '2026-11-29', data: '2026-11-29', responsavel: 'felipe', tipo: 'regular', motivo: 'Escala Regular' },
+      { id: '2026-12-06', data: '2026-12-06', responsavel: 'luana', tipo: 'regular', motivo: 'Escala Regular' },
+      { id: '2026-12-13', data: '2026-12-13', responsavel: 'felipe', tipo: 'regular', motivo: 'Escala Regular' },
+      { id: '2026-12-20', data: '2026-12-20', responsavel: 'luana', tipo: 'regular', motivo: 'Escala Regular' },
+      { id: '2026-12-27', data: '2026-12-27', responsavel: 'felipe', tipo: 'regular', motivo: 'Escala Regular' },
+    ];
+
+    let escalaGlobal = [...escalaInicial];
+    let usuarioAutenticado = false;
+
+    // Conexão Firestore usando Strict Path (Rule 1)
+    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'escala_domingos', 'escala-principal');
+
+    // Inicialização da Autenticação e Firestore Sync
+    async function inicializarApp() {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+        usuarioAutenticado = true;
+        conectarFirestoreSnapshot();
+      } catch (err) {
+        console.warn("Autenticação Firestore em modo de fallback offline:", err);
+        // Fallback LocalStorage se houver restrição de permissão no ambiente estático
+        carregarFallbackLocal();
+      }
+    }
+
+    function conectarFirestoreSnapshot() {
+      onSnapshot(docRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data && Array.isArray(data.escala)) {
+            escalaGlobal = data.escala;
+            renderizarEscala();
+            atualizarHeaderStatus(true);
+          }
+        } else {
+          // Documento inicial ainda não criado no Firestore, criar agora
+          salvarEscalaNoFirestore(escalaInicial);
+        }
+      }, (error) => {
+        console.warn("Erro de snapshot Firestore (usando modo persistente local):", error);
+        atualizarHeaderStatus(false);
+        carregarFallbackLocal();
+      });
+    }
+
+    async function salvarEscalaNoFirestore(novaEscala) {
+      escalaGlobal = novaEscala;
+      renderizarEscala();
+      
+      // Salva em localStorage como contingência
+      localStorage.setItem('escala_domingos_backup', JSON.stringify(novaEscala));
+
+      if (usuarioAutenticado) {
+        try {
+          await setDoc(docRef, { escala: novaEscala, ultimaAtualizacao: new Date().toISOString() });
+          mostrarToast("Sincronizado na nuvem com sucesso!");
+        } catch (e) {
+          console.error("Erro ao salvar no Firestore:", e);
+          mostrarToast("Salvo localmente!");
+        }
+      }
+    }
+
+    function carregarFallbackLocal() {
+      const backup = localStorage.getItem('escala_domingos_backup');
+      if (backup) {
+        try {
+          escalaGlobal = JSON.parse(backup);
+        } catch (e) {
+          escalaGlobal = [...escalaInicial];
+        }
+      }
+      renderizarEscala();
+    }
+
+    function atualizarHeaderStatus(online) {
+      const ping = document.getElementById('sync-ping');
+      const dot = document.getElementById('sync-dot');
+      const text = document.getElementById('sync-text');
+
+      if (online) {
+        ping.className = "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75";
+        dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500";
+        text.innerText = "Sincronizado em Tempo Real";
+      } else {
+        ping.className = "hidden";
+        dot.className = "relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500";
+        text.innerText = "Modo Local Ativo";
+      }
+    }
+
+    // Funções Globais expostas para o HTML
+    window.salvarTroca = function(e) {
+      e.preventDefault();
+      const idDomingo = document.getElementById('select-domingo-troca').value;
+      const solicitante = document.getElementById('select-solicitante').value; // 'felipe' ou 'luana'
+      const motivo = document.getElementById('input-motivo').value.trim();
+
+      const quemCobre = solicitante === 'felipe' ? 'luana' : 'felipe';
+
+      const index = escalaGlobal.findIndex(item => item.id === idDomingo);
+      if (index === -1) return;
+
+      const novaEscala = [...escalaGlobal];
+
+      // O domingo solicitado vira folga do solicitante e trabalho do substituto
+      novaEscala[index].responsavel = quemCobre;
+      novaEscala[index].tipo = 'cobertura';
+      novaEscala[index].motivo = `Cobertura: ${motivo}`;
+
+      // Aplica a regra dos 2 domingos seguidos para quem cobriu
+      let compensados = 1;
+      for (let i = index + 1; i < novaEscala.length && compensados < 2; i++) {
+        novaEscala[i].responsavel = quemCobre;
+        novaEscala[i].tipo = 'cobertura';
+        novaEscala[i].motivo = `Compensação de Cobertura (${compensados + 1}/2)`;
+        compensados++;
+      }
+
+      salvarEscalaNoFirestore(novaEscala);
+      fecharModalTroca();
+      document.getElementById('input-motivo').value = '';
+    };
+
+    window.alternarTurnoManual = function(id) {
+      const index = escalaGlobal.findIndex(item => item.id === id);
+      if (index !== -1) {
+        const novaEscala = [...escalaGlobal];
+        const atual = novaEscala[index].responsavel;
+        novaEscala[index].responsavel = atual === 'felipe' ? 'luana' : 'felipe';
+        novaEscala[index].tipo = 'regular';
+        novaEscala[index].motivo = 'Ajuste Manual de Escala';
+        salvarEscalaNoFirestore(novaEscala);
+      }
+    };
+
+    window.reiniciarEscalaPadrao = function() {
+      if (confirm("Deseja restaurar a escala para o estado padrão de planejamento?")) {
+        salvarEscalaNoFirestore([...escalaInicial]);
+      }
+    };
+
+    window.abrirModalTroca = function() {
+      const selectDomingo = document.getElementById('select-domingo-troca');
+      selectDomingo.innerHTML = '';
+      
+      escalaGlobal.forEach(d => {
+        const option = document.createElement('option');
+        option.value = d.id;
+        option.innerText = `${formatarDataBR(d.data)} - Atual: ${d.responsavel.toUpperCase()}`;
+        selectDomingo.appendChild(option);
+      });
+
+      document.getElementById('modal-troca').classList.remove('hidden');
+    };
+
+    window.fecharModalTroca = function() {
+      document.getElementById('modal-troca').classList.add('hidden');
+    };
+
+    window.copiarLinkPainel = function() {
+      const dummy = document.createElement('input');
+      document.body.appendChild(dummy);
+      dummy.value = window.location.href;
+      dummy.select();
+      document.execCommand('copy');
+      document.body.removeChild(dummy);
+      mostrarToast("Link do painel copiado!");
+    };
+
+    window.aplicarFiltros = function() {
+      renderizarEscala();
+    };
+
+    function formatarDataBR(dataStr) {
+      const [ano, mes, dia] = dataStr.split('-');
+      return `${dia}/${mes}/${ano}`;
+    }
+
+    function renderizarEscala() {
+      const filtroResp = document.getElementById('filtro-responsavel').value;
+      const filtroTipo = document.getElementById('filtro-tipo').value;
+
+      const tbody = document.getElementById('tabela-escala');
+      tbody.innerHTML = '';
+
+      let totalFelipe = 0;
+      let totalLuana = 0;
+      let proximoTurno = null;
+
+      const dadosFiltrados = escalaGlobal.filter(item => {
+        if (filtroResp !== 'todos' && item.responsavel !== filtroResp) return false;
+        if (filtroTipo !== 'todos' && item.tipo !== filtroTipo) return false;
+        return true;
+      });
+
+      // Calcular totais
+      escalaGlobal.forEach((item, idx) => {
+        if (item.responsavel === 'felipe') totalFelipe++;
+        if (item.responsavel === 'luana') totalLuana++;
+        if (idx === 0) proximoTurno = item;
+      });
+
+      // Atualizar Cards
+      document.getElementById('card-total-felipe').innerText = totalFelipe;
+      document.getElementById('card-total-luana').innerText = totalLuana;
+      
+      if (proximoTurno) {
+        document.getElementById('card-proximo-turno').innerText = proximoTurno.responsavel.toUpperCase();
+        document.getElementById('card-proximo-data').innerText = formatarDataBR(proximoTurno.data);
+      }
+
+      const temCobertura = escalaGlobal.some(d => d.tipo === 'cobertura');
+      document.getElementById('card-status-compensacao').innerText = temCobertura ? "Ajuste Ativo" : "Padrão 1x1";
+      document.getElementById('card-desc-compensacao').innerText = temCobertura ? "Existem trocas aplicadas" : "Nenhuma cobertura pendente";
+
+      // Renderizar Linhas
+      dadosFiltrados.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/80 transition-colors";
+
+        const ehFelipe = item.responsavel === 'felipe';
+        const badgeRespClass = ehFelipe 
+          ? "bg-sky-100 text-sky-800 border-sky-200" 
+          : "bg-purple-100 text-purple-800 border-purple-200";
+
+        const badgeTipoClass = item.tipo === 'cobertura'
+          ? "bg-amber-50 text-amber-700 border-amber-200"
+          : "bg-slate-100 text-slate-600 border-slate-200";
+
+        tr.innerHTML = `
+          <td class="py-3 px-5 font-semibold text-slate-800 font-display">
+            ${formatarDataBR(item.data)}
+          </td>
+          <td class="py-3 px-5">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold border ${badgeRespClass}">
+              <span class="w-1.5 h-1.5 rounded-full ${ehFelipe ? 'bg-sky-600' : 'bg-purple-600'}"></span>
+              ${item.responsavel.toUpperCase()}
+            </span>
+          </td>
+          <td class="py-3 px-5">
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium border ${badgeTipoClass}">
+              ${item.tipo === 'cobertura' ? 'Cobertura / Troca' : 'Escala Regular'}
+            </span>
+          </td>
+          <td class="py-3 px-5 text-slate-600 font-medium">
+            ${item.motivo}
+          </td>
+          <td class="py-3 px-5 text-right">
+            <button onclick="alternarTurnoManual('${item.id}')" class="text-xs text-slate-400 hover:text-sky-600 transition font-medium underline">
+              Alternar
+            </button>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    function mostrarToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-mensagem').innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // Inicialização da aplicação
+    window.addEventListener('DOMContentLoaded', () => {
+      inicializarApp();
+    });
+  </script>
+</body>
+</html>
